@@ -1,0 +1,282 @@
+{
+  "name": "Example - Retry and Exponential Backoff",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        16
+      ],
+      "id": "600d121e-379c-4808-bf43-96e8819f2744",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "11463a85-3d1b-4880-bfdc-ac755c2470dc",
+              "leftValue": "={{ $json.tries }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        32
+      ],
+      "id": "1714bbb5-4761-4543-a9c9-49236ba96968",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delay_seconds }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        144
+      ],
+      "id": "7d6cd302-8df4-403d-bb47-1cc3f3d99386",
+      "name": "Wait",
+      "webhookId": "1a1eebc3-ab06-4ef7-85d4-ecd7191efb30"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fdfe0fe6-9e9e-4721-9d17-6d6783d45696",
+              "name": "tries",
+              "value": "={{ $json.tries-1 }}",
+              "type": "number"
+            },
+            {
+              "id": "2baaf3e9-ab86-4d3e-858e-d2e735ce580e",
+              "name": "delay_seconds",
+              "value": "={{ $json.delay_seconds * 2 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1008,
+        144
+      ],
+      "id": "5d3d97b3-970a-47a9-8449-5a865b867c4b",
+      "name": "Update tries and delay"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "11a78797-8ba0-4648-89b2-a2c52bd135a0",
+              "name": "tries",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "d5a87d8d-4e6f-4197-9700-86bc45ad55c6",
+              "name": "delay_seconds",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        96,
+        16
+      ],
+      "id": "5d8b799b-21ce-4807-9f05-1687c14646bf",
+      "name": "Retry setup"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -352
+      ],
+      "id": "5b8d3ae4-20fb-420e-ab7c-809489cd084b",
+      "name": "Successful items"
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $('API That Throws Errors').item.json.error }}"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -192
+      ],
+      "id": "a3530904-664e-49de-ad21-2b88eb5eac0d",
+      "name": "Errored items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nitems.push({ json: { \"name\": \"Dave\", \"age\": 28 } });\nitems.push({ json: { \"name\": \"Alice\", \"age\": 34 } });\nitems.push({ json: { \"name\": \"Sam\", \"age\": 22 } });\nitems.push({ json: { \"name\": \"Jessica\", \"age\": 29 } });\nitems.push({ json: { \"name\": \"Tom\", \"age\": 41 } });\nitems.push({ json: { \"name\": \"Linda\", \"age\": 36 } });\nitems.push({ json: { \"name\": \"Michael\", \"age\": 31 } });\nitems.push({ json: { \"name\": \"Sophie\", \"age\": 25 } });\nitems.push({ json: { \"name\": \"Brian\", \"age\": 38 } });\nitems.push({ json: { \"name\": \"Emma\", \"age\": 27 } });\n\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        16
+      ],
+      "id": "a32045f2-60a0-48b0-b53a-91156e59283e",
+      "name": "Create 10 items"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "console.log($input)\n\nif ($json.age > 35) {\n  throw Error('Age limit error');\n}\n\nreturn $json;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        16
+      ],
+      "id": "cf414b3c-a942-452a-a490-397da2a0d1d1",
+      "name": "API That Throws Errors",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "maxTries": 5,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create 10 items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Errored items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Update tries and delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update tries and delay": {
+      "main": [
+        [
+          {
+            "node": "API That Throws Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry setup": {
+      "main": [
+        [
+          {
+            "node": "API That Throws Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 10 items": {
+      "main": [
+        [
+          {
+            "node": "Retry setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API That Throws Errors": {
+      "main": [
+        [
+          {
+            "node": "Successful items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "65449b47-7742-4f1f-bd62-24da741d014a",
+  "meta": {
+    "instanceId": "bc4f08e7f8552bda6e78de5bf5078e390542f531ede98aab2f57ef19f472103e"
+  },
+  "id": "AvCZYxY92UivGUzT",
+  "tags": []
+}

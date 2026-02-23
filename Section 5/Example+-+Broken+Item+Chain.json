@@ -1,0 +1,117 @@
+{
+  "name": "Example - Broken Item Chain",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -32
+      ],
+      "id": "ed4558ff-a8fb-4eaa-8389-b550fc855907",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = [];\nitems.push({ json: { \"item no\": 1, \"name\": \"Dave\", \"age\": 35 } });\nitems.push({ json: { \"item no\": 2, \"name\": \"Alice\", \"age\": 34 } });\nitems.push({ json: { \"item no\": 3, \"name\": \"Sam\", \"age\": 22 } });\nitems.push({ json: { \"item no\": 4, \"name\": \"Jessica\", \"age\": 29 } });\nitems.push({ json: { \"item no\": 5, \"name\": \"Michael\", \"age\": 37 } });\nitems.push({ json: { \"item no\": 6, \"name\": \"Sophie\", \"age\": 25 } });\nitems.push({ json: { \"item no\": 7, \"name\": \"Emma\", \"age\": 27 } });\nitems.push({ json: { \"item no\": 8, \"name\": \"Brian\", \"age\": 34 } });\nitems.push({ json: { \"item no\": 9, \"name\": \"Tom\", \"age\": 41 } });\nitems.push({ json: { \"item no\": 10, \"name\": \"Linda\", \"age\": 36 } });\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -32
+      ],
+      "id": "f4a7fe50-581f-44a8-a441-205662a253c5",
+      "name": "Create 10 tems"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "39a0c56b-95ae-428c-98b4-d6dbd72d8e49",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "3f68bb6a-5f44-4ffb-b219-6c6ec2369679",
+              "name": "age",
+              "value": "={{ $('Create 10 tems').item.json.age }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        336,
+        -32
+      ],
+      "id": "4133cb1a-5a70-4f66-8fc6-c39e3eb04dc3",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = [];\nitems.push({ json: { \"item no\": 1, \"name\": \"Dave\" } });\nitems.push({ json: { \"item no\": 2, \"name\": \"Alice\" } });\nitems.push({ json: { \"item no\": 3, \"name\": \"Sam\" } });\n//items.push({ json: { \"item no\": 4, \"name\": \"Jessica\" } });\nitems.push({ json: { \"item no\": 5, \"name\": \"Michael\" } });\nitems.push({ json: { \"item no\": 6, \"name\": \"Sophie\" } });\n//items.push({ json: { \"item no\": 7, \"name\": \"Emma\" } });\nitems.push({ json: { \"item no\": 8, \"name\": \"Brian\" } });\nitems.push({ json: { \"item no\": 9, \"name\": \"Tom\" } });\nitems.push({ json: { \"item no\": 10, \"name\": \"Linda\" } });\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -32
+      ],
+      "id": "757ad9d3-9a37-476b-b43e-482e741b406e",
+      "name": "Re-create the list"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create 10 tems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 10 tems": {
+      "main": [
+        [
+          {
+            "node": "Re-create the list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-create the list": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c5a90081-8868-4c77-85bd-86f7afb15d41",
+  "meta": {
+    "instanceId": "bc4f08e7f8552bda6e78de5bf5078e390542f531ede98aab2f57ef19f472103e"
+  },
+  "id": "0JrNopptQyaI6XtN",
+  "tags": []
+}

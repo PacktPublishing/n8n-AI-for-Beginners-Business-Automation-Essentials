@@ -1,0 +1,814 @@
+{
+  "name": "Inbox Manager v7 - Done",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        16
+      ],
+      "id": "e07d6f27-ef75-44f9-ad11-4fb58ec4ade2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        -192
+      ],
+      "id": "96c1050c-4d5f-4d0c-ab49-9d20e06f47ca",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "simple": false,
+        "filters": {
+          "q": "label:inbox"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -432,
+        -96
+      ],
+      "id": "b43cb228-185d-472e-adab-229e00f3bb14",
+      "name": "Get many messages",
+      "webhookId": "a5ff0d36-17f7-4040-8437-720f98bf1a10",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lRz9MdRu0NeJbpAt",
+          "name": "Dave's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are my Personal Email Labeler.  \nWhen I feed you the subject and body of a new email, you must assign exactly one label—no extra text.\n\nLabel definitions:\n- Inquiry  \nSender asks a question or requests information.  \n- Action Required  \nRequests that demand you do something (book, confirm, complete). \n- Follow-up Reminder  \nEmails reminding you of something pending or that you already acted on.  \n- Task  \nContains to-do items or project steps.  \n- Personal  \nFrom friends or family; non-work.  \n- Urgent  \nCritical deadlines, emergencies, time-sensitive.  \n- Job Update  \nDirect messages from recruiters/HR or alerts from job portals (LinkedIn, Naukri, etc.).  \n- Social / Networking  \nNotifications from social sites (GitHub, Twitter, forums) not job-related.  \n- Bank  \nStatements, alerts, transaction notices, fraud warnings from your bank.  \n- Invoice  \nBilling, receipts, payment requests.  \n- Receipt  \nE-commerce order confirmations, tickets, one-off purchase receipts.  \n- Subscription Renewal  \nReminders for software licenses, memberships, domain renewals.  \n- Event Invite  \nCalendar invitations or RSVPs (Google Meet, Zoom, Outlook).  \n- System Notification  \nAlerts from monitoring tools, CI/CD, cloud services, security scanners.  \n- Newsletter  \nSubscription updates, promotions, digests.  \n- Spam / Junk  \nUnwanted bulk mail, phishing attempts, obvious ads.\n- Unknown\nDoes not fit into any category above.  \n\nRules:\n- Read subject + body.  \n- Choose the single best label.  \n- Output **only** that label.\n\nHere is the email details:\nFrom: {{ $json.from }}\nSubject line: {{ $json.subject }}\nEmail Body: \n{{ $json.text }}\n\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        416,
+        16
+      ],
+      "id": "4463f364-29a7-4623-a70d-f402af1111e8",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "P933KHBOlI3XDNXL",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "cleanedText = item.json.text.replace(/<img[^>]*>/gi, '')\n  .replace(/<a\\b[^>]*>(.*?)<\\/a>/gi, '')\n  .replace(/\\[image:[^\\]]*\\]/gi, '')\n  .replace(/<https?:\\/\\/[^>]*>/gi, '');\n\nreturn {\n  json: {\n    id: item.json.id,\n    from: item.json.from.text,\n    to: item.json.to.text,\n    subject: item.json.subject,\n    text: cleanedText\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -96
+      ],
+      "id": "98e18183-bcf0-4270-b275-6b45c1b861ce",
+      "name": "Code in JavaScript",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5f23bb7-642b-45b1-8ed5-6c3977840763",
+              "name": "ai_label",
+              "value": "={{ $json.message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "8c08b213-58bc-4aa9-a44f-978740f80d78",
+              "name": "message_id",
+              "value": "={{ $('Get many messages').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        -112
+      ],
+      "id": "56f83439-6adb-4758-a8db-5efc6f24d3ac",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "ai_label",
+              "field2": "name"
+            }
+          ]
+        },
+        "resolve": "preferInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.compareDatasets",
+      "typeVersion": 2.3,
+      "position": [
+        1840,
+        -320
+      ],
+      "id": "aee9e7c2-3e03-437c-b18c-cb93635c6a8e",
+      "name": "Compare Datasets",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "create",
+        "name": "={{ $json.ai_label }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2080,
+        -400
+      ],
+      "id": "2ccabbae-b179-4d68-8249-cc32da0f3fa9",
+      "name": "Create a label",
+      "webhookId": "a41e5168-2fd1-4fe1-938d-aef2f59bbd12",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lRz9MdRu0NeJbpAt",
+          "name": "Dave's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1616,
+        -208
+      ],
+      "id": "22c6aa71-4688-4336-b969-a1223d8281a6",
+      "name": "All labels",
+      "webhookId": "d5585632-e2ff-46f6-aafa-7c9e5f56a9bf",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lRz9MdRu0NeJbpAt",
+          "name": "Dave's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "ai_label",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        -368
+      ],
+      "id": "b381bf33-c95b-40d4-a742-0f8541a793ba",
+      "name": "Labels we need"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.message_id }}",
+        "labelIds": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2080,
+        144
+      ],
+      "id": "fed9e6c5-9016-4bbd-8fba-38e3b245b48e",
+      "name": "Add label to message",
+      "webhookId": "98807715-bde9-4f4a-bac2-1f97ad4681d7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lRz9MdRu0NeJbpAt",
+          "name": "Dave's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Label all messages and remove from inbox",
+        "height": 352,
+        "width": 992,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1552,
+        48
+      ],
+      "typeVersion": 1,
+      "id": "062eba93-1efc-4508-9239-d3f033723454",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Create any missing labels\n",
+        "height": 432,
+        "width": 656,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1584,
+        -464
+      ],
+      "typeVersion": 1,
+      "id": "7080d952-d830-4c15-8917-6c2b8d3cb60c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "ai_label",
+              "field2": "name"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1840,
+        112
+      ],
+      "id": "c34c431e-5c51-4672-9cb5-ccd3ad4b6579",
+      "name": "Get Matching Label"
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1632,
+        224
+      ],
+      "id": "5db565dd-9cd6-4be2-a699-89583d56acb4",
+      "name": "All labels1",
+      "webhookId": "22fedae5-87a7-4e1a-ab47-865797962f3c",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lRz9MdRu0NeJbpAt",
+          "name": "Dave's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Get Matching Label').item.json.message_id }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2304,
+        96
+      ],
+      "id": "c532d33d-ef4c-4737-b8cf-fbb6b179baf6",
+      "name": "Remove label from message",
+      "webhookId": "b2affc9c-afdd-4913-8747-d0fd77ba41a1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lRz9MdRu0NeJbpAt",
+          "name": "Dave's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "e559dfbe-f7d2-474f-9eb6-6c869a04198d",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        16
+      ],
+      "id": "9c3f734e-131d-4727-9c7d-c3b2e07b553b",
+      "name": "Wait",
+      "webhookId": "39a7cd76-6d2d-4b98-9636-e3f2d845f1ba"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ed53dce0-1449-42aa-b35b-bc20369b77cf",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -176
+      ],
+      "id": "78346aba-8919-4113-b5db-a6e93d438dca",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -288
+      ],
+      "id": "8138c947-c354-452a-a112-a775d4aa438d",
+      "name": "Errored items"
+    },
+    {
+      "parameters": {
+        "source": "googleSheets",
+        "documentId": {
+          "__rl": true,
+          "value": "1hR5yFTL9SsXgD5GRpmgNVwoIJvz5TkbeCN3zkKNLvnE",
+          "mode": "list",
+          "cachedResultName": "Inbox Manager - Evaluation Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hR5yFTL9SsXgD5GRpmgNVwoIJvz5TkbeCN3zkKNLvnE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hR5yFTL9SsXgD5GRpmgNVwoIJvz5TkbeCN3zkKNLvnE/edit#gid=0"
+        }
+      },
+      "type": "n8n-nodes-base.evaluationTrigger",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        304
+      ],
+      "id": "532ae46b-0a04-41c9-9cc1-4259fe918934",
+      "name": "When fetching a dataset row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dWYuv6QV2qXAbsZf",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "checkIfEvaluating"
+      },
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.8,
+      "position": [
+        768,
+        16
+      ],
+      "id": "5930f842-6bd6-48a7-87a7-334e920f0776",
+      "name": "Evaluation"
+    },
+    {
+      "parameters": {
+        "source": "googleSheets",
+        "documentId": {
+          "__rl": true,
+          "value": "1hR5yFTL9SsXgD5GRpmgNVwoIJvz5TkbeCN3zkKNLvnE",
+          "mode": "list",
+          "cachedResultName": "Inbox Manager - Evaluation Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hR5yFTL9SsXgD5GRpmgNVwoIJvz5TkbeCN3zkKNLvnE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hR5yFTL9SsXgD5GRpmgNVwoIJvz5TkbeCN3zkKNLvnE/edit#gid=0"
+        },
+        "outputs": {
+          "values": [
+            {
+              "outputName": "actual_category",
+              "outputValue": "={{ $json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.8,
+      "position": [
+        1072,
+        352
+      ],
+      "id": "40c6d72d-a081-4183-aec1-10c1aeb04c84",
+      "name": "Evaluation1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dWYuv6QV2qXAbsZf",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Get many messages": [
+      {
+        "json": {
+          "id": "199be53c5aab7826",
+          "threadId": "199be53c5aab7826",
+          "labelIds": [
+            "INBOX"
+          ],
+          "sizeEstimate": 48963,
+          "headers": {
+            "delivered-to": "Delivered-To: aspiretechslns@gmail.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id d75a77b69052e-4e55a63d44asor149081091cf.1.2025.10.07.03.59.45\r\n        for <aspiretechslns@gmail.com>\r\n        (Google Transport Security);\r\n        Tue, 07 Oct 2025 03:59:45 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:ac8:57c3:0:b0:4d1:7a05:9328 with SMTP id\r\n d75a77b69052e-4e5769735f2mr190204231cf.0.1759834783916; Tue, 07 Oct 2025\r\n 03:59:43 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1759834785; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=WesgkeuxwkrXJ3658UR4DA+bsWrZwz5CSwjayfiQvCbfRyfYeEvY6xLtOYMOvHc6Dr\r\n         /xT9G4+IUY5o5Q37nnNrjgZZpEhhh1OLHX4fRPW/RjlPU5FfzhBDZi0EYmVVKFUqiG1O\r\n         wrOGByX21w0mnSGEKuljowpily4LJWwzG5VEClR5EOysaeaWcMiheIzzeulPW6jYRqx+\r\n         yJGTtvu7092E2/QbHZGVBDNt5alSn6cE2CnMLX+LX+0gk9yUAXXEbthELtavwY7kLzdp\r\n         q0+rpB/P3zoSxC+WVLmmemn+ShDiKfe+CLc/XbGVJ63tIxdX0ANNS1dj5kjRvrtFCCen\r\n         7/fA==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version;\r\n        bh=X0YcpgfZZHrklrlotjfJsZlD49bUpcA8wTRFozEV01k=;\r\n        fh=M7rvrJFZbso/N0lrWLzbmf5+8xP5N/dp1A/jepwUSVU=;\r\n        b=DJcLBWg0JZi1v+roZQoDcE3xuPdo4+qVzUSxXdnsJNQ6aBroj+9oyrLR7+rmp/sjNL\r\n         54RLL42DwsZ5DU5Ry11JwrkkdEX2sxSig2miE1ZMeZ1vD/L9nfbuN6nQz66dhQoUr5jK\r\n         /mLcN955A49HMqV4tDfDlo652IKDd0Fhkm6WFhLpjnKO5vu3d/+B2fvs2JGPbuqX2NAr\r\n         ZNzgJo7ZujGRfGt2h6LJ10RyoMzJXHh+EIsw1skEMmsxpGBaub1vRLA5/D6w8gIEflyL\r\n         cWxp74xLTLITc/61K2thCASYSJUog4GaPadTWfUXfOLdRTbKhGs/wvIRldL8+PcS1oBF\r\n         UQpw==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       spf=pass (google.com: domain of dave.j.pedley@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=dave.j.pedley@gmail.com;\r\n       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=hotmail.com",
+            "return-path": "Return-Path: <dave.j.pedley@gmail.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of dave.j.pedley@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       spf=pass (google.com: domain of dave.j.pedley@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=dave.j.pedley@gmail.com;\r\n       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=hotmail.com",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20230601; t=1759834784; x=1760439584;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=X0YcpgfZZHrklrlotjfJsZlD49bUpcA8wTRFozEV01k=;\r\n        b=ajmpGVvd12bA/5Dov2y4j2HJSpnRmq6Hq4P3zkxWS20iLOzk/QsN5XiygSREdLepfe\r\n         c2x3XfYUY00Ao39c8NhcDTuxsExLDn2kQgj9R7PAH8utkEWxmgamYbTATU0vM4X9MJdq\r\n         BsBuzIitHwxV72XPI519eN2qThBMlwuWYckYxEP8jbKxA8q9mI8pVmZb03H/6oZxOFbM\r\n         10PPX3KjpoKCbDuaKdu3LVctaJ3abgxpyxPlfJV6nyqj1YNqQuP4ecZ4j5DwP58EjbHo\r\n         YKnzPMZxiXz2dkxDSS987ViwS0UbhqHNcvTRcxV5WWEFka3pkz2UZjt3Z6mpbWzKtVrs\r\n         G+Zg==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YyIT03iB474WrTL7K9/aYqj2BRLXn4rUCJYSgMDEBPDvTKGX7UT\r\n\tJ0Dy/Ho1qi8d7MNt5pYoL0C9F/eIMxE9XsgsjRP/g9DLAQhUsf09tFG3YjL2axeN5pdJ5BNuM/C\r\n\tjt80uvuo2qThvFPjFhQWehbgcrqH6Scgt64Sutg==",
+            "x-gm-gg": "X-Gm-Gg: ASbGncvkWfYp7xrNfyy6rIj+xNyIHKDOHR8+zD7O712bsxMqlyHhv1Dg5wKdU91l1XU\r\n\teASrJlF3bSUYzSCZXMEv4EyLWpmGTfPaU6rJ9F765NvxJ22NQiIzH6MuaL0CKT/UU+CEKmPAjuB\r\n\t1cQaKeEVdbyYZKlYAp15GkzNynU5Usc7wSX5ujFSZ8o6EjyqTdHfo6dKRZhPUUy42xmsCiVedSu\r\n\tZc4sPaBfkXOveUqST2okhetp/povbYW6Tk1WkKAAg==",
+            "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IH69hWJDtM49Z1NfZUlIqREfCSi8ycLk1GVyQ1gfSjwciRzlPGtOJDydN0+oQ2IyTUtXusj1ey89i3eDyIOKtA=",
+            "mime-version": "MIME-Version: 1.0",
+            "references": "References: <2e2d792a-a899-4d66-b3ac-17197215a979@atl1s07mta2750.xt.local>",
+            "in-reply-to": "In-Reply-To: <2e2d792a-a899-4d66-b3ac-17197215a979@atl1s07mta2750.xt.local>",
+            "from": "From: David Pedley <dave_pedley@hotmail.com>",
+            "date": "Date: Tue, 7 Oct 2025 11:59:08 +0100",
+            "x-gm-features": "X-Gm-Features: AS18NWC82kY9cGjPmmLPfzkhZORfgrzcsfwelavFmnJTQkueKqY0j0k7hQTswWg",
+            "message-id": "Message-ID: <CAFBfRuJyFOCF=v8VG9x_pFEW7_b-EmJXe6XBHPJ2BDVbUXJbiQ@mail.gmail.com>",
+            "subject": "Subject: =?UTF-8?Q?Fwd=3A_Nike_x_EA_SPORTS_FC=E2=84=A2_26?=",
+            "to": "To: \"aspiretechslns@gmail.com\" <aspiretechslns@gmail.com>",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"00000000000028a65606408f77c9\""
+          },
+          "html": "<div dir=\"ltr\"><div class=\"gmail_quote gmail_quote_container\"><div class=\"msg-3864823797563555025\"><div class=\"m_-3864823797563555025main-body\" bgcolor=\"#151616\" style=\"Margin:0;background:#151616!important;box-sizing:border-box;color:#fcfcf7;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;min-width:100%;padding:0;text-align:left;width:100%!important\"><table class=\"m_-3864823797563555025body\" bgcolor=\"#151616\" style=\"Margin:0;background:#151616!important;border-collapse:collapse;border-spacing:0;color:#fcfcf7;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;height:100%;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td align=\"center\" valign=\"top\" style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><center style=\"min-width:640px;width:100%\"><table align=\"center\" style=\"Margin:0 auto;border-collapse:collapse;border-spacing:0;float:none;margin:0 auto;padding:0;text-align:center;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><table align=\"center\" class=\"m_-3864823797563555025container\" style=\"Margin:0 auto;background:transparent;border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0;text-align:inherit;vertical-align:top;width:640px\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><table class=\"m_-3864823797563555025collapse\" style=\"border-collapse:collapse;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"border-collapse:collapse;padding:0;text-align:left;vertical-align:top\"><th class=\"m_-3864823797563555025small-12 m_-3864823797563555025columns\" style=\"border-collapse:collapse;Margin:0 auto;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0 auto;padding:0;padding-bottom:0;padding-left:0;padding-right:0;text-align:left;width:648px\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><th style=\"border-collapse:collapse;Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left\"><br><div id=\"m_-3864823797563555025_two50\"></div> <img id=\"m_-3864823797563555025_two50_img\" width=\"1\" height=\"1\" style=\"margin:0!important;padding:0!important;border:0!important;height:1px!important;width:1px!important\">\n     \n                    \n                    \n                    <p style=\"Margin:0;Margin-bottom:10px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:14px;font-weight:normal;line-height:1.618;margin:0;margin-bottom:10px;padding:6px 0 11px 0;text-align:center\">\n            \n            \n                \n                    <span style=\"display:block\"><a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd08bd8469a1f6cf63b16fef9ec1f95a3028cc9f5e4db5375d5e36c7a1b97d329b49882f02209647526b73e218e735a6645842e0220b533b15\" style=\"color:#fcfcf7;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-weight:normal;padding:0;margin:0;Margin:0;line-height:1.618;color:#151616;text-decoration:none;direction:ltr;text-align:left;color:#fcfcf7;text-decoration:underline\" target=\"_blank\">The Club is Phantom’s</a></span>\n                \n            \n            \n                  </p>\n                  </th>\n<th style=\"Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th></tr></tbody></table></th>\n                </tr></tbody></table>\n              </td></tr></tbody></table>\n            </td></tr></tbody></table>\n            <table align=\"center\" style=\"Margin:0 auto;background:#151616;border-collapse:collapse;border-spacing:0;float:none;margin:0 auto;padding:0;text-align:center;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:10px 0;text-align:left;vertical-align:top\">\n              <table align=\"center\" class=\"m_-3864823797563555025container\" style=\"Margin:0 auto;background:transparent;border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0;text-align:inherit;vertical-align:top;width:640px\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\">\n                <table class=\"m_-3864823797563555025collapse\" style=\"border-collapse:collapse;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n                  <th class=\"m_-3864823797563555025small-12 m_-3864823797563555025columns\" style=\"Margin:0 auto;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0 auto;padding:0;padding-bottom:0;padding-left:0;padding-right:0;text-align:left;width:648px\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><th style=\"Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left\">\n                  \n                 \n                    \n                    <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccdfe178fe34371b8c7c95e4ebcb03ebfd878e75561f45c1b2e39b02f112e63fbd0c85719fd5c490dff6495c31e68dcf6135ba50c202a843bca\" style=\"color:#151616;direction:ltr;text-align:left;text-decoration:none\" target=\"_blank\"><center style=\"min-width:592px;width:100%\">\n                      <img width=\"353\" alt=\"Electronic Arts\" class=\"m_-3864823797563555025ealogo\" align=\"center\" style=\"height:auto;Margin:0 auto;border:none;clear:both;display:inline;float:none;margin:0 auto;max-width:353px;outline:none;text-align:center;text-decoration:none;width:100%\">\n                    </center></a>\n                    \n                  </th>\n<th style=\"Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th></tr></tbody></table></th>\n\n                </tr></tbody></table>\n              </td></tr></tbody></table>\n            </td></tr></tbody></table>\n            <table align=\"center\" style=\"Margin:0 auto;border-collapse:collapse;border-spacing:0;float:none;margin:0 auto;padding:0;text-align:center;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\">\n            \n            \n              <table cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" role=\"presentation\" style=\"min-width:100%\"><tbody><tr><td>\n\n\n<table class=\"m_-3864823797563555025container\" style=\"Margin:0 auto;background:0 0;border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0;text-align:inherit;vertical-align:top;width:640px\" align=\"center\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:16px;font-weight:400;line-height:16px;margin:0;padding:0;text-align:left;vertical-align:top\" height=\"16px\"> </td></tr></tbody></table>\n<table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"> <a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10ee5e64d177d436c1d2edc405bd65c1e7d7f0aeaee580e8c4da2b0aa472ab4751e17d58be7515be9aa49fe1b836cc698a254f9d5640b364cc\" style=\"color:#151616;direction:ltr;text-align:left;text-decoration:none\" target=\"_blank\">\n<img alt=\"Play Now\" style=\"border:none;clear:both;display:block;max-width:100%;outline:0;text-decoration:none;width:auto;height:auto\" width=\"640\" border=\"0\"></a></td></tr></tbody></table><table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:16px;font-weight:400;line-height:16px;margin:0;padding:0;text-align:left;vertical-align:top\" height=\"16px\"> </td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table>\n              \n           \n\n           \n\n           \n              <table cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" role=\"presentation\" style=\"min-width:100%\"><tbody><tr><td>\n\n<table class=\"m_-3864823797563555025container\" style=\"Margin:0 auto;background:0 0;border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0;text-align:inherit;vertical-align:top;width:640px\" align=\"center\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:16px;font-weight:400;line-height:16px;margin:0;padding:0;text-align:left;vertical-align:top\" height=\"16px\"> </td></tr></tbody></table>\n<table style=\"border-collapse:collapse;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n<th class=\"m_-3864823797563555025small-12 m_-3864823797563555025columns\" aria-label=\"Learn More\" style=\"Margin:0 auto;background-image:url(&#39;&#39;);background-position:top;background-repeat:no-repeat!important;background-size:100%!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0 auto;padding:0;padding-bottom:7px;padding-left:0!important;padding-right:0!important;text-align:left;width:624px\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n<th style=\"Margin:0;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left\"><table class=\"m_-3864823797563555025spacer m_-3864823797563555025card-bg\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n<td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:0!important;font-weight:400;height:0!important;line-height:0!important;margin:0;padding:0;text-align:left;vertical-align:top\" width=\"100%\" height=\"188\"><a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f101d38d9efd71ac807bb77bbaa85b8a6a1f510d0e22da62e700e72fa6c11a2d9e94f72213f5ab1abbde3b0172424835b9dfac99989e5868943\" style=\"color:transparent;direction:ltr;display:block;font-size:0!important;height:0!important;line-height:0!important;padding:0 0 50.8% 0!important;text-align:left;text-decoration:none\" aria-label=\"Learn More\" target=\"_blank\"> </a></td></tr></tbody></table><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n<td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;padding-left:16px!important;padding-right:16px!important;text-align:left;vertical-align:top\"><table class=\"m_-3864823797563555025container\" style=\"Margin:0 auto;background:0 0;background-color:#151616;border:1px solid #151616;border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0;text-align:inherit;vertical-align:top;width:100%\" bgcolor=\"#ffffff\" align=\"center\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n<td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:24px 16px 7px 16px;text-align:left;vertical-align:top\"><h3 style=\"Margin:0;margin-bottom:5px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Expanded&#39;,sans-serif;font-size:22px;font-weight:400;line-height:28px;margin:0;margin-bottom:5px;padding:0;text-align:left;word-wrap:normal\"><a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10b396a68ae7ad2e6bedd5030941118b04bcba643e87805a033c74990dac87509543d66712827388f5ccb987d119a3fc288197939865e15a45\" style=\"color:#fcfcf7;direction:ltr;text-align:left;font-family:&#39;Cruyff Sans Expanded&#39;,sans-serif;text-decoration:none;font-size:22px\" target=\"_blank\">The Path to FC Pro Open</a></h3>\n<p style=\"Margin:0;margin-bottom:5px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;margin-bottom:5px;padding:0;text-align:left\"> Got what it takes to compete against the best EA SPORTS FC™ players worldwide? Register in game now to take part in FC Pro Open*! </p><table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:22px;font-weight:400;line-height:22px;margin:0;padding:0;text-align:left;vertical-align:top\" height=\"22px\"> </td></tr></tbody></table>\n<table style=\"Margin:0 0 16px 0;border-collapse:collapse;border-spacing:0;direction:ltr;margin:0 0 16px 0;padding:0;text-align:left;vertical-align:top;width:auto\" align=\"left\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n<td style=\"Margin:0;background:#07f468;border:0;border-collapse:collapse!important;border-radius:10px;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top;word-break:keep-all\"><a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10cf791f1b22b56f8fd872ea31a2839b04d998b1ebf56743865501c0d26f71c24422fb4ae0f64af858063bf6d869a0de4bbeb8f186eaa6d9bd\" style=\"background-color:#07f468;background-size:1px 100%;border:0 solid #07f468;border-radius:10px;color:#151616;direction:ltr;display:inline-block;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:700;padding:10px 20px 10px 20px;text-align:left;text-decoration:none;text-transform:capitalize\" target=\"_blank\"><strong style=\"font-weight:400\">Learn More</strong></a></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table>\n</td></tr></tbody></table></th><th style=\"Margin:0;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th></tr></tbody></table></th></tr></tbody></table><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\" align=\"center\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\"><table style=\"border-collapse:collapse;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\">\n<tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><th class=\"m_-3864823797563555025small-12 m_-3864823797563555025columns\" style=\"Margin:0 auto;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0 auto;padding:0;padding-bottom:7px;padding-left:16px;padding-right:16px;text-align:left;width:624px\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><th style=\"Margin:0;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0;text-align:left\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\">\n<tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0 16px 12px 16px;text-align:left;vertical-align:top\" align=\"left\"><p style=\"Margin:0;margin-bottom:5px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:13px;font-weight:400;line-height:19px;margin:0;margin-bottom:5px;padding:0;text-align:left\"> *Conditions &amp; restrictions apply. For Official Rules Visit - \n<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10feb9b0f45da7e0e1b7f9c3e2440ff1259057c28f7de2280774ef379f39182feae1239569d917b3d37f74165e03e604e059ef86cb7921236a\" style=\"color:#fcfcf7;text-decoration:underline\" target=\"_blank\">https://www.ea.com/games/ea-sports-fc/fc-pro/ea-sports-fc-pro-26-official-rules</a>  </p></td></tr>\n</tbody></table></th><th style=\"Margin:0;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Light&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th></tr></tbody></table></th></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table>\n              \n           \n\n           \n\n           \n\n           \n\n           \n              \n              \n              <table align=\"center\" style=\"background-color:#151616;border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\">\n                <table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td height=\"32px\" style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:32px;font-weight:normal;line-height:32px;margin:0;padding:0;text-align:left;vertical-align:top\"> </td></tr></tbody></table>\n              \n                <table align=\"center\" class=\"m_-3864823797563555025container\" style=\"Margin:0 auto;background:transparent;border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0;text-align:inherit;vertical-align:top;width:640px\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left;vertical-align:top\">\n                  <table style=\"border-collapse:collapse;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n                    \n              \n             \n                \n                  </tr></tbody></table>\n              \n                    <table dir=\"ltr\" style=\"border-collapse:collapse!important;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"border-collapse:collapse!important;padding:0;text-align:left;vertical-align:top\">\n                    <th class=\"m_-3864823797563555025small-12 m_-3864823797563555025columns\" style=\"border-collapse:collapse!important;Margin:0 auto;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0 auto;padding:0;padding-bottom:16px;padding-left:16px;padding-right:16px;text-align:left;width:624px\"><table style=\"border-collapse:collapse!important;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"border-collapse:collapse!important;padding:0;text-align:left;vertical-align:top\"><th style=\"border-collapse:collapse!important;Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left\">\n              \n              \n                          <h6 align=\"left\" style=\"Margin:0;Margin-bottom:10px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Expanded&#39;,sans-serif;font-size:14px;font-weight:bold;line-height:1.618;margin:0;margin-bottom:10px;padding:0!important;text-align:left;text-transform:uppercase;word-wrap:normal\">JOIN THE CONVERSATION</h6>\n              \n                          <table dir=\"ltr\" align=\"left\" style=\"border-collapse:collapse!important;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:auto!important;border-bottom:1px solid #151616\">\n                            <tbody><tr style=\"border-collapse:collapse!important;padding:0;text-align:left;vertical-align:top;border-bottom:1px solid #151616\">\n              \n                      \n                      <td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding-top:8px;padding-bottom:8px;padding-right:8px;padding-left:0!important;text-align:left;vertical-align:top;width:25px\">\n              \n                          \n                            <a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10ad84e99c65185203e6c8cac7259984f9d4d044906eb55d44cdef6b581fa86a6d1a4ac9f1cf04078249a3c53bb101a26ebabda5474c3946db\" style=\"color:#151616;direction:ltr;text-align:left;text-decoration:none\" target=\"_blank\"><img width=\"25\" alt=\"Facebook\" style=\"border:none;clear:both;display:inline-block;height:25px;max-height:25px;max-width:25px;min-height:25px;min-width:25px;outline:none;text-decoration:none;width:25px\"></a>\n                          \n                      </td>\n                      \n                      <td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:8px;text-align:left;vertical-align:top;width:25px\">\n\n              \n                          \n                            <a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f107dc52aa360e50bf73b92546679741cc1e63e9db7b94f16217b18519b8c5c71d74110484fb9757746ce5b7f15455ac1a7c64c43d4489d19f3\" style=\"color:#151616;direction:ltr;text-align:left;text-decoration:none\" target=\"_blank\"><img width=\"25\" alt=\"Twitter\" style=\"border:none;clear:both;display:inline-block;height:25px;max-height:25px;max-width:25px;min-height:25px;min-width:25px;outline:none;text-decoration:none;width:25px\"></a>\n                          \n                      </td>\n                      \n                      <td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:8px;text-align:left;vertical-align:top;width:25px\">\n\n              \n                          \n                            <a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10d0a5e587953cca7fb65fe474c887c74d40a8f9c267611d6eec1648e13051ded74ff2009fd9d3b4182be1c653a313ff3fb54c036d94a893ca\" style=\"color:#151616;direction:ltr;text-align:left;text-decoration:none\" target=\"_blank\"><img width=\"25\" alt=\"Instagram\" style=\"border:none;clear:both;display:inline-block;height:25px;max-height:25px;max-width:25px;min-height:25px;min-width:25px;outline:none;text-decoration:none;width:25px\"></a>\n                          \n                      </td>\n                      \n                      <td style=\"Margin:0;border-collapse:collapse!important;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:8px;text-align:left;vertical-align:top;width:25px\">\n\n              \n                          \n                            <a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10c476387d83ba2263c23f41b06fcf4efbded6ac7c6d9760181b8e9645b0031231b0af50b3a38f225362b4ae4b71172ea4ea6f73a1065400b7\" style=\"color:#151616;direction:ltr;text-align:left;text-decoration:none\" target=\"_blank\"><img width=\"25\" alt=\"YouTube\" style=\"border:none;clear:both;display:inline-block;height:25px;max-height:25px;max-width:25px;min-height:25px;min-width:25px;outline:none;text-decoration:none;width:25px\"></a>\n                          \n                        </td>\n                      \n                      </tr>  \n                    </tbody></table>\n                    </th>\n<th style=\"Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th></tr></tbody></table></th>\n                  </tr></tbody></table>\n                  <table style=\"border-collapse:collapse;border-spacing:0;display:table;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\">\n                    <th class=\"m_-3864823797563555025small-12 m_-3864823797563555025columns\" style=\"Margin:0 auto;color:#fcfcf7;direction:ltr;display:table-cell!important;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:normal;line-height:1.618;margin:0 auto;padding:0;padding-bottom:16px;padding-left:16px;padding-right:16px;text-align:left;width:624px\"><table style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><th style=\"Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:12px;font-weight:normal;line-height:1.618;margin:0;padding:0;text-align:left\">\n                      <hr color=\"#FCFCF7\" size=\"1\">\n                      <table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td height=\"16px\" style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:16px;font-weight:normal;line-height:16px;margin:0;padding:0;text-align:left;vertical-align:top\"> </td></tr></tbody></table>\n\n                      \n                      <table dir=\"ltr\" align=\"left\" width=\"100%\">\n                          <tbody><tr>\n                          \n                            <td> \n                               <a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10f38d23acf181040eb4ef81ec95e2ac3d915f561f8e318f9d2ce12528629a270811ae27b0a679dbcb3cc28c11900c2354ab8124c9e0ecb6b9\" target=\"_blank\"><img alt=\"https://pegi.info\" style=\"clear:both;display:block;max-height:100px;max-width:100%;outline:0;text-decoration:none;width:auto;height:100px\" height=\"100\" border=\"0\" align=\"left\"></a><p style=\"Margin:0;margin-bottom:5px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:12px;font-weight:400;line-height:19px;margin:0;margin-bottom:5px;padding:0;text-align:left\"> In-game Purchases (Includes Random Items) </p>\n                            \n                            </td>\n                          </tr>\n                          <tr>\n                            <td>\n                              <table dir=\"ltr\" align=\"left\" width=\"100%\">\n                                <tbody><tr><th style=\"Margin:0;color:#151616;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:18px;font-weight:400;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th>\n                              </tr></tbody></table>\n                            </td>\n                          </tr>\n                        </tbody></table>\n                      \n\n                      \n                      <p style=\"Margin:0;Margin-bottom:10px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:12px;font-weight:normal;line-height:1.618;margin:0;margin-bottom:10px;padding:0;text-align:left\">\n                        © 2025 Electronic Arts Inc.\n                      </p>\n                      \n                      \n                    \n                \n              \n              \n              <p style=\"Margin:0;Margin-bottom:10px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:12px;font-weight:normal;line-height:1.618;margin:0;margin-bottom:10px;padding:0;text-align:left\"><br><a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd93fbdb0d3ad489d004f8f2f57d572cfbf9517e1757e15186f07ec28c3ceee19c04b8d5f87247b668870a7cb44ca491942b3b7edd3facd674\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">UPDATE YOUR PREFERENCES</a></p>\n              \n                      <p style=\"Margin:0;Margin-bottom:10px;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:12px;font-weight:normal;line-height:1.618;margin:0;margin-bottom:10px;padding:0;text-align:left\">\n                        If you no longer want us to contact you, <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd99275bb3f2237375f2880a676f2b0499b014b05814900362e571159d563af562c39d7c6d26221a5e0cfc3890d08e0b09e8527f85e702c96c\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">click here</a> to be removed from our mailing list or to change your preferences. You can also write to: Privacy Policy Administrator, EA Swiss Sarl, <span>Place du Molard 8, Geneva 1204, Switzerland</span>\n                      </p>\n                      <table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td height=\"16px\" style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:16px;font-weight:normal;line-height:16px;margin:0;padding:0;text-align:left;vertical-align:top\"> </td></tr></tbody></table>\n              \n                      <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd199a046af7b1736acded5beba02af945d6a5e7c759b64f8633212fb744d7c9c0c5be66be8121ef1dae7f657c91fe55acf8b679079600124b\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">About Us</a> | \n              \n                      <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd177a514f2314954c04b15f04bd69093e97c0dc1a6005f397b940358e3ee3b74128ae954aaa83429e8dd56a85731656d987f24c613827bdc3\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">Privacy and Cookie Policy</a> | \n              \n                      <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd58a30884e06d96df3fd1be3bd3e7c62429480aab2b745a8b6ded989afde65944428e3b909c137c5c9c2efcaf27383424c51f9c07051c7c08\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">User Agreement</a> | \n               \n                      <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd1ffe46b4d86ae092160826e2a51d63e04f0a30dac4c9e559018fd4056c34cf9b9efbb3e3d2891be16a4f68a0b8f8b8586167fb625102835d\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">Register</a> | \n              \n                      <a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccdd5fa86ed2cfb1ffa729b3e19933b2b75f628b6d25068e454e451a50203c68cebe1d5219364bd76b50326ca90f6560e428bde1eae0e26c40a\" style=\"color:#fcfcf7;direction:ltr;display:inline-block;font-size:12px;text-align:left;text-decoration:underline\" target=\"_blank\">Legal</a> \n\n                      <table class=\"m_-3864823797563555025spacer\" style=\"border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%\"><tbody><tr style=\"padding:0;text-align:left;vertical-align:top\"><td height=\"64px\" style=\"Margin:0;border-collapse:collapse!important;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:64px;font-weight:normal;line-height:64px;margin:0;padding:0;text-align:left;vertical-align:top\"> </td></tr></tbody></table>\n                        </th>\n<th style=\"Margin:0;color:#fcfcf7;direction:ltr;font-family:&#39;Cruyff Sans Regular&#39;,sans-serif;font-size:12px;font-weight:normal;line-height:1.618;margin:0;padding:0!important;text-align:left;width:0\"></th></tr></tbody></table></th>\n                  </tr></tbody></table>\n                </td></tr></tbody></table>\n              </td></tr></tbody></table>\n              \n            </td></tr></tbody></table>\n          </center>\n        </td>\n      </tr>\n    </tbody></table>\n  </div>\n\n</div></div></div>\n",
+          "text": "The Club is Phantom’s\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd08bd8469a1f6cf63b16fef9ec1f95a3028cc9f5e4db5375d5e36c7a1b97d329b49882f02209647526b73e218e735a6645842e0220b533b15>\n[image: Electronic Arts]\n<https://click.e.ea.com/?qs=06f991e4b54d7ccdfe178fe34371b8c7c95e4ebcb03ebfd878e75561f45c1b2e39b02f112e63fbd0c85719fd5c490dff6495c31e68dcf6135ba50c202a843bca>\n\n[image: Play Now]\n<https://click.e.ea.com/?qs=0853c4d5fc684f10ee5e64d177d436c1d2edc405bd65c1e7d7f0aeaee580e8c4da2b0aa472ab4751e17d58be7515be9aa49fe1b836cc698a254f9d5640b364cc>\n\n\n\n<https://click.e.ea.com/?qs=0853c4d5fc684f101d38d9efd71ac807bb77bbaa85b8a6a1f510d0e22da62e700e72fa6c11a2d9e94f72213f5ab1abbde3b0172424835b9dfac99989e5868943>\nThe Path to FC Pro Open\n<https://click.e.ea.com/?qs=0853c4d5fc684f10b396a68ae7ad2e6bedd5030941118b04bcba643e87805a033c74990dac87509543d66712827388f5ccb987d119a3fc288197939865e15a45>\n\nGot what it takes to compete against the best EA SPORTS FC™ players\nworldwide? Register in game now to take part in FC Pro Open*!\n\n*Learn More*\n<https://click.e.ea.com/?qs=0853c4d5fc684f10cf791f1b22b56f8fd872ea31a2839b04d998b1ebf56743865501c0d26f71c24422fb4ae0f64af858063bf6d869a0de4bbeb8f186eaa6d9bd>\n\n*Conditions & restrictions apply. For Official Rules Visit -\nhttps://www.ea.com/games/ea-sports-fc/fc-pro/ea-sports-fc-pro-26-official-rules\n<https://click.e.ea.com/?qs=0853c4d5fc684f10feb9b0f45da7e0e1b7f9c3e2440ff1259057c28f7de2280774ef379f39182feae1239569d917b3d37f74165e03e604e059ef86cb7921236a>\n\nJOIN THE CONVERSATION\n[image: Facebook]\n<https://click.e.ea.com/?qs=0853c4d5fc684f10ad84e99c65185203e6c8cac7259984f9d4d044906eb55d44cdef6b581fa86a6d1a4ac9f1cf04078249a3c53bb101a26ebabda5474c3946db>\n[image:\nTwitter]\n<https://click.e.ea.com/?qs=0853c4d5fc684f107dc52aa360e50bf73b92546679741cc1e63e9db7b94f16217b18519b8c5c71d74110484fb9757746ce5b7f15455ac1a7c64c43d4489d19f3>\n[image:\nInstagram]\n<https://click.e.ea.com/?qs=0853c4d5fc684f10d0a5e587953cca7fb65fe474c887c74d40a8f9c267611d6eec1648e13051ded74ff2009fd9d3b4182be1c653a313ff3fb54c036d94a893ca>\n[image:\nYouTube]\n<https://click.e.ea.com/?qs=0853c4d5fc684f10c476387d83ba2263c23f41b06fcf4efbded6ac7c6d9760181b8e9645b0031231b0af50b3a38f225362b4ae4b71172ea4ea6f73a1065400b7>\n------------------------------\n\n[image: https://pegi.info]\n<https://click.e.ea.com/?qs=0853c4d5fc684f10f38d23acf181040eb4ef81ec95e2ac3d915f561f8e318f9d2ce12528629a270811ae27b0a679dbcb3cc28c11900c2354ab8124c9e0ecb6b9>\n\nIn-game Purchases (Includes Random Items)\n\n© 2025 Electronic Arts Inc.\n\n\nUPDATE YOUR PREFERENCES\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd93fbdb0d3ad489d004f8f2f57d572cfbf9517e1757e15186f07ec28c3ceee19c04b8d5f87247b668870a7cb44ca491942b3b7edd3facd674>\n\nIf you no longer want us to contact you, click here\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd99275bb3f2237375f2880a676f2b0499b014b05814900362e571159d563af562c39d7c6d26221a5e0cfc3890d08e0b09e8527f85e702c96c>\nto be removed from our mailing list or to change your preferences. You can\nalso write to: Privacy Policy Administrator, EA Swiss Sarl, Place du Molard\n8, Geneva 1204, Switzerland\n  About Us\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd199a046af7b1736acded5beba02af945d6a5e7c759b64f8633212fb744d7c9c0c5be66be8121ef1dae7f657c91fe55acf8b679079600124b>\n|\nPrivacy and Cookie Policy\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd177a514f2314954c04b15f04bd69093e97c0dc1a6005f397b940358e3ee3b74128ae954aaa83429e8dd56a85731656d987f24c613827bdc3>\n|\nUser Agreement\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd58a30884e06d96df3fd1be3bd3e7c62429480aab2b745a8b6ded989afde65944428e3b909c137c5c9c2efcaf27383424c51f9c07051c7c08>\n|\nRegister\n<https://click.e.ea.com/?qs=06f991e4b54d7ccd1ffe46b4d86ae092160826e2a51d63e04f0a30dac4c9e559018fd4056c34cf9b9efbb3e3d2891be16a4f68a0b8f8b8586167fb625102835d>\n|\nLegal\n<https://click.e.ea.com/?qs=06f991e4b54d7ccdd5fa86ed2cfb1ffa729b3e19933b2b75f628b6d25068e454e451a50203c68cebe1d5219364bd76b50326ca90f6560e428bde1eae0e26c40a>\n",
+          "textAsHtml": "<p>The Club is Phantom&rsquo;s<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd08bd8469a1f6cf63b16fef9ec1f95a3028cc9f5e4db5375d5e36c7a1b97d329b49882f02209647526b73e218e735a6645842e0220b533b15\">https://click.e.ea.com/?qs=06f991e4b54d7ccd08bd8469a1f6cf63b16fef9ec1f95a3028cc9f5e4db5375d5e36c7a1b97d329b49882f02209647526b73e218e735a6645842e0220b533b15</a>&gt;<br/>[image: Electronic Arts]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccdfe178fe34371b8c7c95e4ebcb03ebfd878e75561f45c1b2e39b02f112e63fbd0c85719fd5c490dff6495c31e68dcf6135ba50c202a843bca\">https://click.e.ea.com/?qs=06f991e4b54d7ccdfe178fe34371b8c7c95e4ebcb03ebfd878e75561f45c1b2e39b02f112e63fbd0c85719fd5c490dff6495c31e68dcf6135ba50c202a843bca</a>&gt;</p><p>[image: Play Now]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10ee5e64d177d436c1d2edc405bd65c1e7d7f0aeaee580e8c4da2b0aa472ab4751e17d58be7515be9aa49fe1b836cc698a254f9d5640b364cc\">https://click.e.ea.com/?qs=0853c4d5fc684f10ee5e64d177d436c1d2edc405bd65c1e7d7f0aeaee580e8c4da2b0aa472ab4751e17d58be7515be9aa49fe1b836cc698a254f9d5640b364cc</a>&gt;</p><p>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f101d38d9efd71ac807bb77bbaa85b8a6a1f510d0e22da62e700e72fa6c11a2d9e94f72213f5ab1abbde3b0172424835b9dfac99989e5868943\">https://click.e.ea.com/?qs=0853c4d5fc684f101d38d9efd71ac807bb77bbaa85b8a6a1f510d0e22da62e700e72fa6c11a2d9e94f72213f5ab1abbde3b0172424835b9dfac99989e5868943</a>&gt;<br/>The Path to FC Pro Open<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10b396a68ae7ad2e6bedd5030941118b04bcba643e87805a033c74990dac87509543d66712827388f5ccb987d119a3fc288197939865e15a45\">https://click.e.ea.com/?qs=0853c4d5fc684f10b396a68ae7ad2e6bedd5030941118b04bcba643e87805a033c74990dac87509543d66712827388f5ccb987d119a3fc288197939865e15a45</a>&gt;</p><p>Got what it takes to compete against the best EA SPORTS FC&trade; players<br/>worldwide? Register in game now to take part in FC Pro Open*!</p><p>*Learn More*<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10cf791f1b22b56f8fd872ea31a2839b04d998b1ebf56743865501c0d26f71c24422fb4ae0f64af858063bf6d869a0de4bbeb8f186eaa6d9bd\">https://click.e.ea.com/?qs=0853c4d5fc684f10cf791f1b22b56f8fd872ea31a2839b04d998b1ebf56743865501c0d26f71c24422fb4ae0f64af858063bf6d869a0de4bbeb8f186eaa6d9bd</a>&gt;</p><p>*Conditions &amp; restrictions apply. For Official Rules Visit -<br/><a href=\"https://www.ea.com/games/ea-sports-fc/fc-pro/ea-sports-fc-pro-26-official-rules\">https://www.ea.com/games/ea-sports-fc/fc-pro/ea-sports-fc-pro-26-official-rules</a><br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10feb9b0f45da7e0e1b7f9c3e2440ff1259057c28f7de2280774ef379f39182feae1239569d917b3d37f74165e03e604e059ef86cb7921236a\">https://click.e.ea.com/?qs=0853c4d5fc684f10feb9b0f45da7e0e1b7f9c3e2440ff1259057c28f7de2280774ef379f39182feae1239569d917b3d37f74165e03e604e059ef86cb7921236a</a>&gt;</p><p>JOIN THE CONVERSATION<br/>[image: Facebook]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10ad84e99c65185203e6c8cac7259984f9d4d044906eb55d44cdef6b581fa86a6d1a4ac9f1cf04078249a3c53bb101a26ebabda5474c3946db\">https://click.e.ea.com/?qs=0853c4d5fc684f10ad84e99c65185203e6c8cac7259984f9d4d044906eb55d44cdef6b581fa86a6d1a4ac9f1cf04078249a3c53bb101a26ebabda5474c3946db</a>&gt;<br/>[image:<br/>Twitter]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f107dc52aa360e50bf73b92546679741cc1e63e9db7b94f16217b18519b8c5c71d74110484fb9757746ce5b7f15455ac1a7c64c43d4489d19f3\">https://click.e.ea.com/?qs=0853c4d5fc684f107dc52aa360e50bf73b92546679741cc1e63e9db7b94f16217b18519b8c5c71d74110484fb9757746ce5b7f15455ac1a7c64c43d4489d19f3</a>&gt;<br/>[image:<br/>Instagram]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10d0a5e587953cca7fb65fe474c887c74d40a8f9c267611d6eec1648e13051ded74ff2009fd9d3b4182be1c653a313ff3fb54c036d94a893ca\">https://click.e.ea.com/?qs=0853c4d5fc684f10d0a5e587953cca7fb65fe474c887c74d40a8f9c267611d6eec1648e13051ded74ff2009fd9d3b4182be1c653a313ff3fb54c036d94a893ca</a>&gt;<br/>[image:<br/>YouTube]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10c476387d83ba2263c23f41b06fcf4efbded6ac7c6d9760181b8e9645b0031231b0af50b3a38f225362b4ae4b71172ea4ea6f73a1065400b7\">https://click.e.ea.com/?qs=0853c4d5fc684f10c476387d83ba2263c23f41b06fcf4efbded6ac7c6d9760181b8e9645b0031231b0af50b3a38f225362b4ae4b71172ea4ea6f73a1065400b7</a>&gt;<br/>------------------------------</p><p>[image: <a href=\"https://pegi.info\">https://pegi.info</a>]<br/>&lt;<a href=\"https://click.e.ea.com/?qs=0853c4d5fc684f10f38d23acf181040eb4ef81ec95e2ac3d915f561f8e318f9d2ce12528629a270811ae27b0a679dbcb3cc28c11900c2354ab8124c9e0ecb6b9\">https://click.e.ea.com/?qs=0853c4d5fc684f10f38d23acf181040eb4ef81ec95e2ac3d915f561f8e318f9d2ce12528629a270811ae27b0a679dbcb3cc28c11900c2354ab8124c9e0ecb6b9</a>&gt;</p><p>In-game Purchases (Includes Random Items)</p><p>&copy; 2025 Electronic Arts Inc.</p><p>UPDATE YOUR PREFERENCES<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd93fbdb0d3ad489d004f8f2f57d572cfbf9517e1757e15186f07ec28c3ceee19c04b8d5f87247b668870a7cb44ca491942b3b7edd3facd674\">https://click.e.ea.com/?qs=06f991e4b54d7ccd93fbdb0d3ad489d004f8f2f57d572cfbf9517e1757e15186f07ec28c3ceee19c04b8d5f87247b668870a7cb44ca491942b3b7edd3facd674</a>&gt;</p><p>If you no longer want us to contact you, click here<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd99275bb3f2237375f2880a676f2b0499b014b05814900362e571159d563af562c39d7c6d26221a5e0cfc3890d08e0b09e8527f85e702c96c\">https://click.e.ea.com/?qs=06f991e4b54d7ccd99275bb3f2237375f2880a676f2b0499b014b05814900362e571159d563af562c39d7c6d26221a5e0cfc3890d08e0b09e8527f85e702c96c</a>&gt;<br/>to be removed from our mailing list or to change your preferences. You can<br/>also write to: Privacy Policy Administrator, EA Swiss Sarl, Place du Molard<br/>8, Geneva 1204, Switzerland<br/>  About Us<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd199a046af7b1736acded5beba02af945d6a5e7c759b64f8633212fb744d7c9c0c5be66be8121ef1dae7f657c91fe55acf8b679079600124b\">https://click.e.ea.com/?qs=06f991e4b54d7ccd199a046af7b1736acded5beba02af945d6a5e7c759b64f8633212fb744d7c9c0c5be66be8121ef1dae7f657c91fe55acf8b679079600124b</a>&gt;<br/>|<br/>Privacy and Cookie Policy<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd177a514f2314954c04b15f04bd69093e97c0dc1a6005f397b940358e3ee3b74128ae954aaa83429e8dd56a85731656d987f24c613827bdc3\">https://click.e.ea.com/?qs=06f991e4b54d7ccd177a514f2314954c04b15f04bd69093e97c0dc1a6005f397b940358e3ee3b74128ae954aaa83429e8dd56a85731656d987f24c613827bdc3</a>&gt;<br/>|<br/>User Agreement<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd58a30884e06d96df3fd1be3bd3e7c62429480aab2b745a8b6ded989afde65944428e3b909c137c5c9c2efcaf27383424c51f9c07051c7c08\">https://click.e.ea.com/?qs=06f991e4b54d7ccd58a30884e06d96df3fd1be3bd3e7c62429480aab2b745a8b6ded989afde65944428e3b909c137c5c9c2efcaf27383424c51f9c07051c7c08</a>&gt;<br/>|<br/>Register<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccd1ffe46b4d86ae092160826e2a51d63e04f0a30dac4c9e559018fd4056c34cf9b9efbb3e3d2891be16a4f68a0b8f8b8586167fb625102835d\">https://click.e.ea.com/?qs=06f991e4b54d7ccd1ffe46b4d86ae092160826e2a51d63e04f0a30dac4c9e559018fd4056c34cf9b9efbb3e3d2891be16a4f68a0b8f8b8586167fb625102835d</a>&gt;<br/>|<br/>Legal<br/>&lt;<a href=\"https://click.e.ea.com/?qs=06f991e4b54d7ccdd5fa86ed2cfb1ffa729b3e19933b2b75f628b6d25068e454e451a50203c68cebe1d5219364bd76b50326ca90f6560e428bde1eae0e26c40a\">https://click.e.ea.com/?qs=06f991e4b54d7ccdd5fa86ed2cfb1ffa729b3e19933b2b75f628b6d25068e454e451a50203c68cebe1d5219364bd76b50326ca90f6560e428bde1eae0e26c40a</a>&gt;</p>",
+          "subject": "Fwd: Nike x EA SPORTS FC™ 26",
+          "references": "<2e2d792a-a899-4d66-b3ac-17197215a979@atl1s07mta2750.xt.local>",
+          "date": "2025-10-07T10:59:08.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "aspiretechslns@gmail.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:aspiretechslns@gmail.com\" class=\"mp_address_email\">aspiretechslns@gmail.com</a></span>",
+            "text": "aspiretechslns@gmail.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "dave_pedley@hotmail.com",
+                "name": "David Pedley"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">David Pedley</span> &lt;<a href=\"mailto:dave_pedley@hotmail.com\" class=\"mp_address_email\">dave_pedley@hotmail.com</a>&gt;</span>",
+            "text": "\"David Pedley\" <dave_pedley@hotmail.com>"
+          },
+          "messageId": "<CAFBfRuJyFOCF=v8VG9x_pFEW7_b-EmJXe6XBHPJ2BDVbUXJbiQ@mail.gmail.com>",
+          "inReplyTo": "<2e2d792a-a899-4d66-b3ac-17197215a979@atl1s07mta2750.xt.local>"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Labels we need",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Matching Label",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "All labels1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "All labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Datasets": {
+      "main": [
+        [
+          {
+            "node": "Create a label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        []
+      ]
+    },
+    "All labels": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Labels we need": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a label": {
+      "main": [
+        []
+      ]
+    },
+    "Get Matching Label": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All labels1": {
+      "main": [
+        [
+          {
+            "node": "Get Matching Label",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Add label to message": {
+      "main": [
+        [
+          {
+            "node": "Remove label from message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Errored items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When fetching a dataset row": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Evaluation1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9e384fb1-b61f-4b16-b6e9-c26ed27fbd9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bc4f08e7f8552bda6e78de5bf5078e390542f531ede98aab2f57ef19f472103e"
+  },
+  "id": "1Wm0gY8A0eKF7gKS",
+  "tags": []
+}

@@ -1,0 +1,149 @@
+{
+  "name": "Example - Execution Order",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -32
+      ],
+      "id": "2ff1297a-ef9c-4799-80f5-a351af55b0a4",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (let i = 0; i < 10; i++) {\n  items.push({ json: {} });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        -32
+      ],
+      "id": "258cf7b2-d505-4ebd-a349-0cb61c60f1dd",
+      "name": "Node 1"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Add a new field called 'myNewField' to the JSON of the item\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -176
+      ],
+      "id": "6d8fd6bc-8a0a-42a3-b6b6-1162482b3e70",
+      "name": "Node 2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Add a new field called 'myNewField' to the JSON of the item\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -176
+      ],
+      "id": "d0ed80fa-93cf-4f26-b59d-f68c96ae4846",
+      "name": "Node 3"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Add a new field called 'myNewField' to the JSON of the item\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        96
+      ],
+      "id": "83e6e320-0092-4273-b338-5d7ca58e4de0",
+      "name": "Node 4"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Add a new field called 'myNewField' to the JSON of the item\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        96
+      ],
+      "id": "2bcae997-7da4-4a5c-95d0-e79ba8638242",
+      "name": "Node 5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Node 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Node 1": {
+      "main": [
+        [
+          {
+            "node": "Node 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Node 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Node 2": {
+      "main": [
+        [
+          {
+            "node": "Node 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Node 4": {
+      "main": [
+        [
+          {
+            "node": "Node 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "5f85fb34-32c6-4ca1-9c0d-c2149ae4d910",
+  "meta": {
+    "instanceId": "bc4f08e7f8552bda6e78de5bf5078e390542f531ede98aab2f57ef19f472103e"
+  },
+  "id": "LFge1RIttIQH7twD",
+  "tags": []
+}

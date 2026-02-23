@@ -1,0 +1,234 @@
+{
+  "name": "Example - Looping and Batching",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        112
+      ],
+      "id": "8d9178e6-5815-48db-bb28-d110ed7544b9",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = [];\nitems.push({ json: { \"item no\": 1, \"name\": \"Dave\", \"age\": 35 } });\nitems.push({ json: { \"item no\": 2, \"name\": \"Alice\", \"age\": 34 } });\nitems.push({ json: { \"item no\": 3, \"name\": \"Sam\", \"age\": 22 } });\nitems.push({ json: { \"item no\": 4, \"name\": \"Jessica\", \"age\": 29 } });\nitems.push({ json: { \"item no\": 5, \"name\": \"Michael\", \"age\": 37 } });\nitems.push({ json: { \"item no\": 6, \"name\": \"Sophie\", \"age\": 25 } });\nitems.push({ json: { \"item no\": 7, \"name\": \"Emma\", \"age\": 27 } });\nitems.push({ json: { \"item no\": 8, \"name\": \"Brian\", \"age\": 34 } });\nitems.push({ json: { \"item no\": 9, \"name\": \"Tom\", \"age\": 41 } });\nitems.push({ json: { \"item no\": 10, \"name\": \"Linda\", \"age\": 36 } });\n\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        112
+      ],
+      "id": "d0535a6f-ebea-458d-95af-ae08ff3062e7",
+      "name": "Create 10 Items"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "if ($json.age > 35) {\n  throw Error('Age limit error');\n}\n\nreturn $json;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        112
+      ],
+      "id": "72b43dd8-a492-465f-ae5d-3be3e32b2ca5",
+      "name": "API That Throws Errors",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "maxTries": 5,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 2,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        112
+      ],
+      "id": "152d39f1-589a-483e-9a77-b5e6745fdce0",
+      "name": "Loop Over Items",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "b3be4435-f0b7-4ea8-b457-f2e61d67dc6d",
+      "name": "Wait",
+      "webhookId": "66651ccf-4a56-4151-8381-4c06df86652f"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -272
+      ],
+      "id": "bcec424f-46c6-446e-91ee-cd2ed810480f",
+      "name": "Error items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -112
+      ],
+      "id": "71c0b53a-fa8d-43e8-a223-c3b03dd0cdd3",
+      "name": "Successful items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4de8631b-6e10-4643-ad78-0107fb53bbb6",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -176
+      ],
+      "id": "2bd55811-6577-41c1-9efa-e3f483a53bdd",
+      "name": "If Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create 10 Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 10 Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API That Throws Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API That Throws Errors": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Error items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Successful items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4473e7fc-b7b0-4a0c-9853-2a8d595bf23f",
+  "meta": {
+    "instanceId": "bc4f08e7f8552bda6e78de5bf5078e390542f531ede98aab2f57ef19f472103e"
+  },
+  "id": "UtnzE7JQZ7YzvBZI",
+  "tags": []
+}
